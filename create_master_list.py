@@ -242,7 +242,7 @@ async def scrape_uber_eats(mode="scrape", target_areas=[], update_chunk=pd.DataF
     final_list = []
     
     async with async_playwright() as p:
-        browser = await await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(locale='ja-JP')
         page = await context.new_page()
         
