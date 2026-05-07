@@ -1,0 +1,64 @@
+name: 🧹 毎週木曜の生存確認・大掃除（10台並列）
+
+on:
+  schedule:
+    - cron: '0 17 * * 3' # 日本時間の毎週木曜 深夜2時
+  workflow_dispatch:
+
+jobs:
+  update_job:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pythonのセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: ライブラリのインストール
+        run: |
+          pip install pandas geopy playwright
+          playwright install --with-deps chromium
+      - name: 分割更新の実行（約2700件ずつ）
+        run: |
+          START=$(( ${{ matrix.chunk }} * 2700 ))
+          END=$(( (${{ matrix.chunk }} + 1) * 2700 ))
+          python create_master_list.py --mode update --start $START --end $END
+          mv store_master_data.csv chunk_${{ matrix.chunk }}.csv || true
+      - name: 結果を一時保存（Artifacts v4）
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-chunk-data-${{ matrix.chunk }}
+          path: chunk_${{ matrix.chunk }}.csv
+          retention-days: 1
+
+  merge_job:
+    needs: update_job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pythonのセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: pandasのインストール
+        run: pip install pandas
+      - name: すべての分割データをダウンロード（v4）
+        uses: actions/download-artifact@v4
+        with:
+          pattern: update-chunk-data-*
+          path: ./
+          merge-multiple: true
+      - name: データの合体処理
+        run: |
+          python merge_csv.py
+      - name: GitHubへ結果を自動コミット＆プッシュ
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          git add store_master_data.csv
+          git commit -m "🧹 [自動] 閉店チェックと営業時間の更新完了" || echo "No changes to commit"
+          git push
