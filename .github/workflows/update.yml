@@ -20,7 +20,7 @@ jobs:
           python-version: '3.10'
       - name: ライブラリのインストール
         run: |
-          pip install pandas geopy playwright
+          pip install pandas geopy playwright certifi
           playwright install --with-deps chromium
       - name: 分割更新の実行（約2700件ずつ）
         run: |
