@@ -1,0 +1,63 @@
+name: 🚀 月曜：新規開拓（0〜999件目）
+
+on:
+  schedule:
+    - ccron: '0 17 * * 2' （水曜の深夜2時）
+  workflow_dispatch:
+
+jobs:
+  scrape_job:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 月曜は 0〜19（20台で1000件分）
+        chunk: [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pythonのセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: ライブラリのインストール
+        run: |
+          pip install pandas geopy playwright certifi
+          playwright install --with-deps chromium
+      - name: 分割スクレイピングの実行（約50件ずつ）
+        run: |
+          START=$(( ${{ matrix.chunk }} * 50 ))
+          END=$(( (${{ matrix.chunk }} + 1) * 50 ))
+          python create_master_list.py --mode scrape --start $START --end $END
+          mv store_master_data.csv chunk_${{ matrix.chunk }}.csv || true
+      - name: 結果を一時保存
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk-data-${{ matrix.chunk }}
+          path: chunk_${{ matrix.chunk }}.csv
+          retention-days: 1
+
+  merge_job:
+    needs: scrape_job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pythonのセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: pandasのインストール
+        run: pip install pandas
+      - name: データのダウンロードと合体
+        uses: actions/download-artifact@v4
+        with:
+          pattern: chunk-data-*
+          path: ./
+          merge-multiple: true
+      - run: python merge_csv.py
+      - name: GitHubへ結果を自動プッシュ
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          git add store_master_data.csv
+          git commit -m "🤖 [自動] 月曜分の新規店舗データを更新" || echo "No changes to commit"
+          git push

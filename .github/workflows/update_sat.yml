@@ -1,8 +1,8 @@
-name: 🧹 毎週木曜の生存確認・大掃除（60台並列）
+name: 🧹 木曜：生存確認（0〜999件目）
 
 on:
   schedule:
-    - cron: '0 17 * * 3' # 日本時間の毎週木曜 深夜2時
+    - cron: cron: '0 17 * * 5'
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+        chunk: [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
     steps:
       - uses: actions/checkout@v4
       - name: Pythonのセットアップ
@@ -22,13 +22,13 @@ jobs:
         run: |
           pip install pandas geopy playwright certifi
           playwright install --with-deps chromium
-      - name: 分割更新の実行（約450件ずつ）
+      - name: 分割更新の実行（約50件ずつ）
         run: |
-          START=$(( ${{ matrix.chunk }} * 450 ))
-          END=$(( (${{ matrix.chunk }} + 1) * 450 ))
+          START=$(( ${{ matrix.chunk }} * 50 ))
+          END=$(( (${{ matrix.chunk }} + 1) * 50 ))
           python create_master_list.py --mode update --start $START --end $END
           mv store_master_data.csv chunk_${{ matrix.chunk }}.csv || true
-      - name: 結果を一時保存（Artifacts v4）
+      - name: 結果を一時保存
         uses: actions/upload-artifact@v4
         with:
           name: update-chunk-data-${{ matrix.chunk }}
@@ -46,19 +46,17 @@ jobs:
           python-version: '3.10'
       - name: pandasのインストール
         run: pip install pandas
-      - name: すべての分割データをダウンロード（v4）
+      - name: データのダウンロードと合体
         uses: actions/download-artifact@v4
         with:
           pattern: update-chunk-data-*
           path: ./
           merge-multiple: true
-      - name: データの合体処理
-        run: |
-          python merge_csv.py
-      - name: GitHubへ結果を自動コミット＆プッシュ
+      - run: python merge_csv.py
+      - name: GitHubへ結果を自動プッシュ
         run: |
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "action@github.com"
           git add store_master_data.csv
-          git commit -m "🧹 [自動] 閉店チェックと営業時間の更新完了" || echo "No changes to commit"
+          git commit -m "🧹 [自動] 木曜分の生存確認・更新完了" || echo "No changes to commit"
           git push
