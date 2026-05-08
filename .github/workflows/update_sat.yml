@@ -2,7 +2,7 @@ name: 🧹 土曜：生存確認（0〜999件目）
 
 on:
   schedule:
-    - cron: cron: '0 17 * * 5'
+    - cron: '0 17 * * 5'
   workflow_dispatch:
 
 jobs:
