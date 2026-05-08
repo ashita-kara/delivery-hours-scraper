@@ -1,8 +1,8 @@
-name: 🚀 月曜：新規開拓（0〜999件目）
+name: 🚀 火曜：新規開拓（0〜999件目）
 
 on:
   schedule:
-    - cron: cron: '0 17 * * 1' （火曜の深夜2時）
+    - cron: '0 17 * * 1' #（火曜の深夜2時）
   workflow_dispatch:
 
 jobs:
