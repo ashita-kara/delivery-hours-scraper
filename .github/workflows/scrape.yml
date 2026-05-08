@@ -1,4 +1,4 @@
-name: 🚀 毎週月曜の新規店舗・一斉発掘（10台並列）
+name: 🚀 毎週月曜の新規店舗・一斉発掘（60台並列）
 
 on:
   schedule:
@@ -22,7 +22,7 @@ jobs:
         run: |
           pip install pandas geopy playwright certifi
           playwright install --with-deps chromium
-      - - name: 分割スクレイピングの実行（約50件ずつに変更）
+      - name: 分割スクレイピングの実行（約50件ずつ）
         run: |
           START=$(( ${{ matrix.chunk }} * 50 ))
           END=$(( (${{ matrix.chunk }} + 1) * 50 ))
